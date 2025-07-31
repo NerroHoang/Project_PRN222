@@ -1,4 +1,4 @@
-namespace BookingVilla
+﻿namespace BookingVilla
 {
     public class Program
     {
@@ -6,27 +6,58 @@ namespace BookingVilla
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // Thiết lập DbContext với SQL Server
+            builder.Services.AddDbContext<BookingVillaPrnContext>(options =>
+                options.UseSqlServer("BookingVillaPRN"));
+
+            // Đăng ký Repository và DAO
+            builder.Services.AddScoped<IVillaRepositories, VillaRepositories>();
+            builder.Services.AddScoped<IServiceRepositories, ServiceRepositories>();
+            builder.Services.AddScoped<IAccountRepositories, AccountRepositories>();
+            builder.Services.AddScoped<IBookingRepositories, BookingRepositories>();
+            builder.Services.AddScoped<IBookingHistoryRepositories, BookingHistoryRepositories>();
+            builder.Services.AddScoped<ICancelBookingRepositories, CancelBookingRepositories>();
+            builder.Services.AddScoped<IEmployeeRepositories, EmployeeRepositories>();
+            builder.Services.AddScoped<ITransactionRepositories, TransactionRepositories>();
+            builder.Services.AddScoped<ICustomerRepositories, CustomerRepository>();
+
+            builder.Services.AddScoped<EmployeeDAO>();
+
+            // Cấu hình Session
+            builder.Services.AddHttpContextAccessor();
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromMinutes(30);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
+            // Cấu hình Razor Pages và CORS
             builder.Services.AddRazorPages();
+            builder.Services.AddSignalR();
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
+            // Cấu hình Middleware
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
 
             app.UseHttpsRedirection();
-            app.UseStaticFiles();
-
+            app.UseStaticFiles(); // Phục vụ file tĩnh
             app.UseRouting();
-
+            app.UseAuthentication();
             app.UseAuthorization();
+            app.UseSession();
+            app.MapHub<NewsHub>("/newsHub");
 
-            app.MapRazorPages();
+            // Cấu hình Endpoint cho Razor Pages
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapRazorPages();
+            });
 
             app.Run();
         }
